@@ -1,0 +1,5 @@
+{
+  "name": "Blackjack Pro com Estatísticas em Tempo Real",
+  "description": "Um jogo de Blackjack profissional estilo cassino com um painel de estatísticas em tempo real. Acompanhe a contagem de cartas, probabilidades de estourar e a composição do baralho enquanto joga contra a mesa em uma interface elegante e responsiva.",
+  "requestFramePermissions": []
+}
