@@ -1,5 +1,7 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 // Correct import from @google/genai
 import { GoogleGenAI } from "@google/genai";
 import { Card, GameState, HandResult, HandHistoryEntry, Rank } from './types';
@@ -13,43 +15,42 @@ import { RANKS, RESHUFFLE_THRESHOLD, NUMBER_OF_DECKS } from './constants';
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const ScoreDisplay = ({ score }: { score: number }) => (
-  <div className="bg-black/50 backdrop-blur-sm text-white font-bold text-xl px-4 py-1 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(0,0,0,0.5)] mb-2">
+  <div className="bg-black/70 backdrop-blur-sm text-white font-bold text-xl px-4 py-1 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.7)] border border-white/20 mb-2">
     {score}
   </div>
 );
 
 const CHIP_DATA_FOR_PILE = [
-  { value: 50000, color: 'bg-gradient-to-br from-gray-600 to-gray-800' },
-  { value: 10000, color: 'bg-gradient-to-br from-purple-600 to-purple-800' },
-  { value: 1000, color: 'bg-gradient-to-br from-green-500 to-green-700' },
-  { value: 500, color: 'bg-gradient-to-br from-red-600 to-red-800' },
-  { value: 100, color: 'bg-gradient-to-br from-blue-500 to-blue-700' },
+  { value: 50000, color: 'bg-[#8A9597] from-[#8A9597] to-[#BFCAD0]', ringColor: 'border-gray-500' },
+  { value: 10000, color: 'bg-[#9D74D5] from-[#9D74D5] to-[#C8A2C8]', ringColor: 'border-purple-400' },
+  { value: 1000, color: 'bg-[#50C878] from-[#50C878] to-[#98FF98]', ringColor: 'border-green-300' },
+  { value: 500, color: 'bg-[#D70040] from-[#D70040] to-[#FF69B4]', ringColor: 'border-red-300' },
+  { value: 100, color: 'bg-[#0080FF] from-[#0080FF] to-[#87CEEB]', ringColor: 'border-blue-300' },
 ];
 
-const ChipForPile: React.FC<{ color: string; style?: React.CSSProperties }> = ({ color, style }) => (
-    <div
-      style={style}
-      className={`absolute w-16 h-16 rounded-full shadow-lg ${color} border-2 border-white/20`}
-    >
-      <div className="absolute inset-[4px] border-2 border-white/60 rounded-full"></div>
-      <div className="absolute inset-[6px] border border-black/20 rounded-full"></div>
+
+const ChipForPile: React.FC<{ color: string; ringColor: string; style?: React.CSSProperties }> = ({ color, ringColor, style }) => (
+  <div style={style} className="absolute w-16 h-16 rounded-full shadow-lg">
+    <div className={`w-full h-full rounded-full bg-gradient-radial ${color} border-2 border-white/50 shadow-inner`}>
+      <div className={`absolute inset-[6px] border-[3px] ${ringColor} rounded-full`}></div>
+      <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/30 to-transparent"></div>
     </div>
+  </div>
 );
+
 
 const BettingPile = ({ bet }: { bet: number }) => {
     if (bet === 0) return null;
 
     let remainingBet = bet;
-    // FIX: Replaced JSX.Element with React.ReactElement to resolve "Cannot find namespace 'JSX'" error.
     const chipStacks: React.ReactElement[][] = [];
 
-    CHIP_DATA_FOR_PILE.forEach(({ value, color }) => {
+    CHIP_DATA_FOR_PILE.forEach(({ value, color, ringColor }) => {
       const count = Math.floor(remainingBet / value);
       if (count > 0) {
-        // FIX: Replaced JSX.Element with React.ReactElement to resolve "Cannot find namespace 'JSX'" error.
         const stack: React.ReactElement[] = [];
         for (let i = 0; i < Math.min(count, 5); i++) { // Limit to 5 visible chips per stack
-          stack.push(<ChipForPile key={`${value}-${i}`} color={color} style={{ transform: `translateY(-${i * 8}px)` }} />);
+          stack.push(<ChipForPile key={`${value}-${i}`} color={color} ringColor={ringColor} style={{ transform: `translateY(-${i * 8}px)` }} />);
         }
         chipStacks.push(stack);
         remainingBet %= value;
@@ -80,6 +81,9 @@ function App() {
   const [currentBet, setCurrentBet] = useState(0);
   const [runningCount, setRunningCount] = useState(0);
   const [aiSuggestion, setAiSuggestion] = useState('');
+  
+  const suggestionTimeoutRef = useRef<number | null>(null);
+  const debouncedGetAiSuggestionRef = useRef<(() => void) | undefined>();
   
   const initialDeckComposition = useCallback(() => RANKS.reduce((acc, rank) => {
     acc[rank] = 4 * NUMBER_OF_DECKS;
@@ -229,7 +233,21 @@ function App() {
   // Dealer's turn logic
   useEffect(() => {
     if (gameState === GameState.DEALER_TURN) {
-      updateCountAndComposition(dealerHand[1]); // Reveal hole card
+      if (dealerHand.length > 1) {
+        updateCountAndComposition(dealerHand[1]); // Reveal hole card
+      }
+
+      const playerFinalScore = calculateHandValue(playerHand);
+      // If player already busted, end the hand immediately.
+      if (playerFinalScore.value > 21) {
+        const dealerFinalScore = calculateHandValue(dealerHand);
+        // Explicitly set the final dealer score to ensure it's updated for the HAND_OVER render.
+        setDealerScore(dealerFinalScore);
+        const dBlackjack = dealerFinalScore.value === 21 && dealerHand.length === 2;
+        determineWinner(playerFinalScore.value, dealerFinalScore.value, false, dBlackjack);
+        setGameState(GameState.HAND_OVER);
+        return;
+      }
 
       let currentDealerHand = [...dealerHand];
       let currentShoe = [...shoe];
@@ -268,8 +286,9 @@ function App() {
         model: 'gemini-2.5-flash',
         contents: prompt,
       });
-
-      const suggestion = response.text.trim();
+      // FIX: The text part of the response should be accessed as a function call in some versions of the SDK.
+      // The error "Expected 1 arguments, but got 0" can be misleading and often points to an incorrect API usage.
+      const suggestion = response.text().trim();
       setAiSuggestion(suggestion);
     } catch (error) {
       console.error("Error fetching AI suggestion:", error);
@@ -277,11 +296,36 @@ function App() {
     }
   }, [gameState, playerHand, dealerHand, playerScore.value, trueCount]);
 
+  // Keep the ref updated with the latest version of the function on every render
   useEffect(() => {
+    debouncedGetAiSuggestionRef.current = getAiSuggestion;
+  });
+
+  useEffect(() => {
+    // Only run this logic when it's the player's turn
     if (gameState === GameState.PLAYER_TURN) {
-      getAiSuggestion();
+      // If there's an existing timeout, clear it
+      if (suggestionTimeoutRef.current) {
+        clearTimeout(suggestionTimeoutRef.current);
+      }
+      // Set a new timeout to call the function after a delay
+      suggestionTimeoutRef.current = window.setTimeout(() => {
+        // Use the function from the ref, which is always up-to-date
+        if (debouncedGetAiSuggestionRef.current) {
+          debouncedGetAiSuggestionRef.current();
+        }
+      }, 750); // Increased debounce delay to 750ms
     }
-  }, [gameState, playerHand, getAiSuggestion]);
+    
+    // Cleanup function to clear the timeout if the component unmounts or dependencies change
+    return () => {
+      if (suggestionTimeoutRef.current) {
+        clearTimeout(suggestionTimeoutRef.current);
+      }
+    }
+  // This effect now only depends on the game state and the player's hand
+  }, [gameState, playerHand]);
+
 
   const resetHand = () => {
     setPlayerHand([]);
@@ -297,41 +341,40 @@ function App() {
 
   return (
     <div className="min-h-screen text-white flex flex-col items-center justify-center p-2 sm:p-4 selection:bg-yellow-500 selection:text-black">
-
-      <div className="w-full flex flex-col xl:flex-row justify-center items-center xl:items-start gap-4">
-        
+      <div className="w-full flex flex-col xl:flex-row justify-center items-center xl:items-start gap-8">
         <div className="flex-grow flex flex-col items-center w-full max-w-7xl">
             {/* Game Table */}
-            <div className="relative w-full aspect-[16/9] p-4 bg-gradient-to-br from-[#8c5a3b] via-[#6b4226] to-[#4a2e1a] rounded-[6rem] sm:rounded-[8rem] md:rounded-[10rem] shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
-              <div className="relative w-full h-full bg-gradient-to-br from-green-700 via-green-800 to-green-900 rounded-[5rem] sm:rounded-[7rem] md:rounded-[9rem] shadow-[inset_0_0_50px_rgba(0,0,0,0.9)] bg-[url('https://www.transparenttextures.com/patterns/felt.png')] flex flex-col justify-between items-center py-10 px-6">
-              
+            <div className="relative w-full aspect-[16/9] p-4 bg-gradient-to-b from-[#b08b57] to-[#8c5a3b] rounded-[6rem] sm:rounded-[8rem] md:rounded-[10rem] shadow-[0_20px_60px_rgba(0,0,0,0.8),_inset_0_5px_15px_rgba(0,0,0,0.5)] border-t-2 border-yellow-600/50">
+              <div className="relative w-full h-full bg-gradient-to-br from-[#2d8659] to-[#1a5f3f] rounded-[5rem] sm:rounded-[7rem] md:rounded-[9rem] shadow-[inset_0_0_80px_rgba(0,0,0,0.9)] bg-[url('https://www.transparenttextures.com/patterns/felt.png')] flex flex-col justify-between items-center py-10 px-6">
+                <div className="absolute inset-0 rounded-[5rem] sm:rounded-[7rem] md:rounded-[9rem] bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.1)_0%,_transparent_60%)]"></div>
+
                 {/* TOP ROW: Dealer Hand & Card Shoe */}
-                <div className="w-full relative flex justify-center items-start min-h-[220px]">
-                    <div className="absolute top-0 left-4 w-28 h-40 bg-gradient-to-br from-yellow-900 to-yellow-950 rounded-lg shadow-lg transform -rotate-6 border-2 border-black/30">
-                      <div className="absolute inset-1 rounded-md border-2 border-yellow-700/50 bg-yellow-900 flex items-center justify-center">
-                          <div className="w-20 h-32 bg-red-800 rounded-md border-2 border-red-900/50 shadow-inner [background-image:repeating-linear-gradient(45deg,_transparent,_transparent_5px,_rgba(255,255,255,0.05)_5px,_rgba(255,255,255,0.05)_10px)]"></div>
+                <div className="w-full relative flex justify-center items-start min-h-[220px] z-10">
+                    <div className="absolute top-0 left-4 w-28 h-40 bg-gradient-to-br from-[#6b4226] to-[#4a2e1a] rounded-lg shadow-lg transform -rotate-6 border-2 border-black/50">
+                      <div className="absolute inset-1 rounded-md border-2 border-yellow-900/50 bg-[#6b4226] flex items-center justify-center">
+                          <div className="w-20 h-32 bg-red-800 rounded-md border-2 border-red-950/50 shadow-inner [background-image:repeating-linear-gradient(45deg,_transparent,_transparent_5px,_rgba(255,255,255,0.05)_5px,_rgba(255,255,255,0.05)_10px)]"></div>
                       </div>
                     </div>
                     
                     <div className="flex flex-col items-center">
                         <div className="flex justify-center items-center h-40 space-x-[-50px]">
                             {dealerHand.length > 0 ? dealerHand.map((card, index) => (
-                                <PlayingCard key={index} card={card} hidden={gameState === GameState.PLAYER_TURN && index === 1} />
+                                <PlayingCard key={`d-${index}`} card={card} hidden={gameState === GameState.PLAYER_TURN && index === 1} animated={true} delay={index * 100} />
                             )) : <div className="h-36 w-24"></div>}
                         </div>
                         {dealerScore.value > 0 && <ScoreDisplay score={dealerScore.value} />}
                     </div>
 
                     <div className="absolute top-4 right-12 text-center">
-                        <p className="font-bold text-white/80 text-lg [text-shadow:0_2px_4px_#000]">Bid:</p>
-                        <p className="text-3xl font-semibold text-yellow-300 [text-shadow:0_2px_4px_#000]">${currentBet.toLocaleString()}</p>
+                        <p className="font-bold text-white/80 text-lg filter drop-shadow-[0_2px_2px_#000]">Bid:</p>
+                        <p className="text-4xl font-black text-yellow-400 [text-shadow:0_0_10px_#ffd700]">${currentBet.toLocaleString()}</p>
                     </div>
                 </div>
 
                 {/* MIDDLE ROW: Result & Betting Pile */}
                 <div className="w-full relative flex justify-center items-center min-h-[140px]">
                     {handResult && (
-                      <div className="absolute z-20 text-5xl font-black text-center text-yellow-300 my-4 bg-black/70 backdrop-blur-sm p-4 rounded-xl shadow-lg" style={{textShadow: '0 2px 5px rgba(0,0,0,0.7), 0 0 12px #fef08a'}}>
+                      <div className="absolute z-20 text-5xl font-black text-center text-yellow-300 my-4 bg-black/70 backdrop-blur-sm p-4 rounded-xl shadow-lg" style={{textShadow: '0 2px 5px rgba(0,0,0,0.7), 0 0 12px #ffed4e'}}>
                           {handResult}
                       </div>
                     )}
@@ -343,16 +386,16 @@ function App() {
                 </div>
 
                 {/* BOTTOM ROW: Player Hand & Balance */}
-                <div className="w-full relative flex justify-center items-end min-h-[220px]">
+                <div className="w-full relative flex justify-center items-end min-h-[220px] z-10">
                    <div className="absolute bottom-4 left-12 text-center">
-                        <p className="font-bold text-white/80 text-lg [text-shadow:0_2px_4px_#000]">Balance:</p>
-                        <p className="text-3xl font-semibold text-yellow-300 [text-shadow:0_2px_4px_#000]">${balance.toLocaleString()}</p>
+                        <p className="font-bold text-white/80 text-lg filter drop-shadow-[0_2px_2px_#000]">Balance:</p>
+                        <p className="text-4xl font-black text-yellow-400 [text-shadow:0_0_10px_#ffd700]">${balance.toLocaleString()}</p>
                     </div>
                    <div className="flex flex-col items-center">
                         {playerScore.value > 0 && <ScoreDisplay score={playerScore.value} />}
                        <div className="flex justify-center items-center h-40 space-x-[-50px]">
                            {playerHand.length > 0 ? playerHand.map((card, index) => (
-                              <PlayingCard key={index} card={card} />
+                              <PlayingCard key={`p-${index}`} card={card} animated={true} delay={index * 100} />
                           )) : <div className="h-36 w-24"></div>}
                        </div>
                    </div>
@@ -361,30 +404,30 @@ function App() {
             </div>
 
             {/* Controls */}
-            <div className="bg-gray-900/40 backdrop-blur-sm p-4 w-full mt-4 rounded-xl shadow-lg border-t-2 border-white/20">
+            <div className="bg-black/30 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl p-4 w-full mt-4">
               {gameState === GameState.PRE_DEAL && (
                    <div className="flex flex-col items-center gap-4">
-                      <p className="text-xl font-bold text-white/80 drop-shadow-lg [text-shadow:0_1px_2px_#000]">Place your bet:</p>
+                      <p className="text-xl font-bold text-white/80 drop-shadow-lg">Place your bet:</p>
                       <CasinoChips balance={balance} onBet={placeBet} disabled={false} />
                       <div className="flex w-full gap-4 max-w-md mx-auto mt-2">
-                          <button onClick={clearBet} disabled={currentBet === 0} className="flex-1 bg-gradient-to-b from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 text-white font-bold py-3 px-4 rounded-lg text-xl disabled:from-gray-700 disabled:to-gray-800 disabled:text-gray-400 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95">
-                              Clear
+                          <button onClick={clearBet} disabled={currentBet === 0} className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-b from-red-500 to-red-800 hover:from-red-400 hover:to-red-700 text-white font-bold py-3 px-4 rounded-lg text-xl disabled:from-gray-700 disabled:to-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-red-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-red-900 active:border-b-0">
+                              <span>&#x2715;</span> Clear
                           </button>
-                          <button onClick={dealHand} disabled={currentBet === 0} className="flex-[2] bg-gradient-to-b from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-black font-bold py-3 px-4 rounded-lg text-xl disabled:from-gray-700 disabled:to-gray-800 disabled:text-gray-400 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95">
-                              Deal
+                          <button onClick={dealHand} disabled={currentBet === 0} className="flex-[2] flex items-center justify-center gap-2 bg-gradient-to-b from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 text-white font-bold py-3 px-4 rounded-lg text-xl disabled:from-gray-700 disabled:to-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-green-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-green-800 active:border-b-0">
+                              <span>&#x1F0CF;</span> Deal
                           </button>
                       </div>
                    </div>
               )}
               {handInProgress && (
                 <div className="flex justify-center space-x-4 max-w-md mx-auto">
-                    <button onClick={hit} disabled={playerScore.value >= 21} className="w-1/2 bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 font-bold py-3 px-6 rounded-lg text-xl disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95">Hit</button>
-                    <button onClick={stand} className="w-1/2 bg-gradient-to-b from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 font-bold py-3 px-6 rounded-lg text-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95">Stand</button>
+                    <button onClick={hit} disabled={playerScore.value >= 21} className="w-1/2 bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 font-bold py-3 px-6 rounded-lg text-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-blue-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-blue-800 active:border-b-0">Hit</button>
+                    <button onClick={stand} className="w-1/2 bg-gradient-to-b from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 font-bold py-3 px-6 rounded-lg text-xl transition-all duration-300 shadow-lg hover:shadow-red-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-red-900 active:border-b-0">Stand</button>
                 </div>
               )}
               {gameState === GameState.HAND_OVER && (
                   <div className="max-w-md mx-auto">
-                    <button onClick={resetHand} className="w-full bg-gradient-to-b from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-black font-bold py-3 px-4 rounded-lg text-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95">
+                    <button onClick={resetHand} className="w-full bg-gradient-to-b from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500 text-black font-bold py-3 px-4 rounded-lg text-xl transition-all duration-300 shadow-lg hover:shadow-yellow-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-yellow-700 active:border-b-0">
                         New Hand
                     </button>
                   </div>
