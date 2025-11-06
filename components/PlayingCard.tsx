@@ -8,25 +8,37 @@ interface PlayingCardProps {
 
 const PlayingCard: React.FC<PlayingCardProps> = ({ card, hidden }) => {
   if (hidden) {
-    return <div className="w-24 h-36 bg-blue-700 rounded-lg border-2 border-white flex items-center justify-center shadow-lg">
-        <div className="w-20 h-32 bg-blue-800 rounded-md border-2 border-blue-500"></div>
-    </div>;
+    return (
+      <div 
+        className="w-24 h-36 bg-gradient-to-br from-blue-800 to-blue-950 rounded-lg border-2 border-gray-400/50 p-1 shadow-lg"
+      >
+        <div className="w-full h-full rounded-md border-2 border-gray-500/30 bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.05)_0%,_transparent_70%)] flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-yellow-400/30 rounded-full"></div>
+        </div>
+      </div>
+    );
   }
 
-  const color = card.suit === Suit.Hearts || card.suit === Suit.Diamonds ? 'text-red-500' : 'text-black';
-
-  const isFaceCard = card.rank === Rank.Jack || card.rank === Rank.Queen || card.rank === Rank.King;
+  const color = card.suit === Suit.Hearts || card.suit === Suit.Diamonds ? 'text-red-600' : 'text-black';
+  
+  const isFaceCard = [Rank.Jack, Rank.Queen, Rank.King].includes(card.rank);
 
   return (
-    <div className={`w-24 h-36 bg-white rounded-lg shadow-md flex flex-col justify-between p-2 font-bold text-2xl ${color} relative overflow-hidden`}>
-      <div className="flex flex-col items-start">
-        <div className="text-3xl leading-none">{card.rank}</div>
-        <div className="text-xl leading-none">{card.suit}</div>
+    <div 
+      className={`w-24 h-36 bg-gray-100 rounded-lg shadow-lg flex flex-col justify-between p-1 font-bold text-lg ${color} relative overflow-hidden border border-gray-300 transition-transform duration-300 transform hover:scale-105 hover:-translate-y-2`}
+    >
+      <div className="flex flex-col items-center leading-none">
+        <span className="text-2xl">{card.rank}</span>
+        <span>{card.suit}</span>
       </div>
-      {isFaceCard && <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-20">{card.rank}</div>}
-      <div className="flex flex-col items-end self-end transform rotate-180">
-        <div className="text-3xl leading-none">{card.rank}</div>
-        <div className="text-xl leading-none">{card.suit}</div>
+      
+      <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-20 select-none" aria-hidden="true">
+        {card.suit}
+      </div>
+      
+      <div className="flex flex-col items-center self-end transform rotate-180 leading-none">
+        <span className="text-2xl">{card.rank}</span>
+        <span>{card.suit}</span>
       </div>
     </div>
   );

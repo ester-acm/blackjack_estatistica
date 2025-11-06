@@ -22,28 +22,30 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({
     if (count < 0) return 'text-red-400';
     return 'text-gray-300';
   };
+  
+  const hasSuggestion = aiSuggestion && aiSuggestion !== 'Aguardando sua vez...' && aiSuggestion !== 'Pensando...' && aiSuggestion !== 'Erro na sugestão';
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg shadow-lg text-white w-full max-w-sm lg:max-w-xs xl:max-w-sm">
-      <h2 className="text-2xl font-bold mb-4 text-center border-b border-gray-600 pb-2">Estatísticas</h2>
+    <div className="bg-gray-900/40 backdrop-blur-sm p-4 rounded-lg shadow-lg text-gray-100 w-full max-w-sm lg:max-w-xs xl:max-w-sm border-t-2 border-white/20">
+      <h2 className="text-2xl font-bold mb-4 text-center border-b border-gray-600/50 pb-2">Estatísticas</h2>
       <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="text-center bg-gray-700 p-2 rounded-lg">
-          <p className="text-sm text-gray-400">Contagem Contínua</p>
+        <div className="text-center bg-black/20 p-2 rounded-lg">
+          <p className="text-sm text-gray-300">Contagem Contínua</p>
           <p className={`text-3xl font-bold ${getCountColor(runningCount)}`}>{runningCount}</p>
         </div>
-        <div className="text-center bg-gray-700 p-2 rounded-lg">
-          <p className="text-sm text-gray-400">Contagem Verdadeira</p>
+        <div className="text-center bg-black/20 p-2 rounded-lg">
+          <p className="text-sm text-gray-300">Contagem Verdadeira</p>
           <p className={`text-3xl font-bold ${getCountColor(trueCount)}`}>{trueCount.toFixed(2)}</p>
         </div>
       </div>
-      <div className="text-center mb-4 bg-gray-700 p-2 rounded-lg">
-        <p className="text-sm text-gray-400">Prob. de Estourar ao Comprar</p>
+      <div className="text-center mb-4 bg-black/20 p-2 rounded-lg">
+        <p className="text-sm text-gray-300">Prob. de Estourar ao Comprar</p>
         <p className="text-3xl font-bold text-yellow-400">{bustProbability.toFixed(2)}%</p>
       </div>
        <div className="mb-4">
           <h3 className="text-lg font-semibold mb-2 text-center">Sugestão da IA (Gemini)</h3>
-          <div className="bg-gray-900 p-3 rounded-lg text-center min-h-[60px] flex items-center justify-center">
-              <p className="text-xl text-cyan-400 font-mono">{aiSuggestion || 'Aguardando sua vez...'}</p>
+          <div className={`bg-black/20 p-3 rounded-lg text-center min-h-[70px] flex items-center justify-center transition-all duration-300 ${hasSuggestion ? 'shadow-[0_0_15px_rgba(56,189,248,0.6)]' : ''}`}>
+              <p className="text-xl text-cyan-300 font-semibold">{aiSuggestion || 'Aguardando sua vez...'}</p>
           </div>
       </div>
       <div>
