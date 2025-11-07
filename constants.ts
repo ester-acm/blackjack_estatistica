@@ -1,4 +1,3 @@
-
 import { Suit, Rank } from './types';
 
 export const SUITS: Suit[] = [Suit.Spades, Suit.Clubs, Suit.Hearts, Suit.Diamonds];

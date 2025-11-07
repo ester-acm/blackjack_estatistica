@@ -1,4 +1,3 @@
-
 import { Card, Rank, Hand } from '../types';
 import { SUITS, RANKS, CARD_VALUES, NUMBER_OF_DECKS, CARD_COUNT_VALUES } from '../constants';
 

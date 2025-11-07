@@ -359,7 +359,7 @@ function App() {
                     <div className="flex flex-col items-center">
                         <div className="flex justify-center items-center h-40 space-x-[-50px]">
                             {dealerHand.length > 0 ? dealerHand.map((card, index) => (
-                                <PlayingCard key={`d-${index}`} card={card} hidden={gameState === GameState.PLAYER_TURN && index === 1} animated={true} delay={index * 100} />
+                            <PlayingCard key={`d-${index}`} card={card} animated={true} delay={index * 100} />
                             )) : <div className="h-36 w-24"></div>}
                         </div>
                         {dealerScore.value > 0 && <ScoreDisplay score={dealerScore.value} />}
@@ -367,7 +367,7 @@ function App() {
 
                     <div className="absolute top-4 right-12 text-center">
                         <p className="font-bold text-white/80 text-lg filter drop-shadow-[0_2px_2px_#000]">Bid:</p>
-                        <p className="text-4xl font-black text-yellow-400 [text-shadow:0_0_10px_#ffd700]">${currentBet.toLocaleString()}</p>
+                        <p className="text-4xl font-black text-yellow-400 [text-shadow:0_1px_2px_#000]">${currentBet.toLocaleString()}</p>
                     </div>
                 </div>
 
@@ -389,7 +389,7 @@ function App() {
                 <div className="w-full relative flex justify-center items-end min-h-[220px] z-10">
                    <div className="absolute bottom-4 left-12 text-center">
                         <p className="font-bold text-white/80 text-lg filter drop-shadow-[0_2px_2px_#000]">Balance:</p>
-                        <p className="text-4xl font-black text-yellow-400 [text-shadow:0_0_10px_#ffd700]">${balance.toLocaleString()}</p>
+                        <p className="text-4xl font-black text-yellow-400 [text-shadow:0_1px_2px_#000]">${balance.toLocaleString()}</p>
                     </div>
                    <div className="flex flex-col items-center">
                         {playerScore.value > 0 && <ScoreDisplay score={playerScore.value} />}
