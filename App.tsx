@@ -359,7 +359,7 @@ function App() {
                     <div className="flex flex-col items-center">
                         <div className="flex justify-center items-center h-40 space-x-[-50px]">
                             {dealerHand.length > 0 ? dealerHand.map((card, index) => (
-                            <PlayingCard key={`d-${index}`} card={card} animated={true} delay={index * 100} />
+                            <PlayingCard key={`d-${index}`} card={card} hidden={index === 1 && gameState === GameState.PLAYER_TURN} animated={true} delay={index * 100} />
                             )) : <div className="h-36 w-24"></div>}
                         </div>
                         {dealerScore.value > 0 && <ScoreDisplay score={dealerScore.value} />}
