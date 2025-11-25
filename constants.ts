@@ -31,3 +31,52 @@ export const CARD_COUNT_VALUES: { [key in Rank]: number } = {
 
 export const NUMBER_OF_DECKS = 6;
 export const RESHUFFLE_THRESHOLD = 0.25; // Reshuffle when 25% of the shoe remains
+
+// UI Translations
+export const UI_TEXT = {
+  pt: {
+    bid: 'Aposta',
+    balance: 'Saldo',
+    placeBet: 'Faça sua aposta:',
+    clear: 'Limpar',
+    deal: 'Distribuir',
+    hit: 'Bater',
+    stand: 'Ficar',
+    newHand: 'Nova Mão',
+    thinking: 'Pensando...',
+    suggestionError: 'Erro na sugestão',
+    dealerHoleCard: 'Verso da carta',
+    cardLabel: (rank: string, suit: string) => `${rank} de ${suit}`,
+    waiting: 'Aguardando sua vez...',
+    statistics: 'Estatísticas',
+    runningCount: 'Contagem Contínua',
+    trueCount: 'Contagem Verdadeira',
+    bustProbability: 'Prob. de Estourar',
+    aiSuggestion: 'Sugestão da IA (Gemini)',
+    deckComposition: 'Composição do Deck',
+  },
+  en: {
+    bid: 'Bid',
+    balance: 'Balance',
+    placeBet: 'Place your bet:',
+    clear: 'Clear',
+    deal: 'Deal',
+    hit: 'Hit',
+    stand: 'Stand',
+    newHand: 'New Hand',
+    thinking: 'Thinking...',
+    suggestionError: 'Suggestion error',
+    dealerHoleCard: 'Card back',
+    cardLabel: (rank: string, suit: string) => `${rank} of ${suit}`,
+    waiting: 'Waiting for your turn...',
+    statistics: 'Statistics',
+    runningCount: 'Running Count',
+    trueCount: 'True Count',
+    bustProbability: 'Bust Probability',
+    aiSuggestion: 'AI Suggestion (Gemini)',
+    deckComposition: 'Deck Composition',
+  },
+};
+
+export type Language = 'pt' | 'en';
+

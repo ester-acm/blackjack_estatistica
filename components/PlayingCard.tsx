@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card } from '../types';
+import { UI_TEXT } from '../constants';
 
 interface PlayingCardProps {
   card: Card;
@@ -41,7 +42,7 @@ const PlayingCard: React.FC<PlayingCardProps> = ({ card, hidden = false, animate
         <div className="absolute inset-0 w-full h-full rounded-lg shadow-lg border border-gray-300 backface-hidden overflow-hidden">
           <img
             src={cardImage}
-            alt={hidden ? 'Verso da carta' : `${card.rank} de ${card.suit}`}
+            alt={hidden ? UI_TEXT.pt.dealerHoleCard : UI_TEXT.pt.cardLabel(card.rank, card.suit)}
             className="w-full h-full object-cover rounded-lg"
             draggable={false}
           />

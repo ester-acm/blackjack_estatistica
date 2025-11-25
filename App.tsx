@@ -9,7 +9,7 @@ import { createShoe, calculateHandValue, getCardCountValue, getBustProbability }
 import PlayingCard from './components/PlayingCard';
 import StatsDashboard from './components/StatsDashboard';
 import CasinoChips from './components/CasinoChips';
-import { RANKS, RESHUFFLE_THRESHOLD, NUMBER_OF_DECKS } from './constants';
+import { RANKS, RESHUFFLE_THRESHOLD, NUMBER_OF_DECKS, UI_TEXT, Language } from './constants';
 
 // Per coding guidelines, initialize GoogleGenAI with an object containing the apiKey from process.env.API_KEY.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -81,6 +81,9 @@ function App() {
   const [currentBet, setCurrentBet] = useState(0);
   const [runningCount, setRunningCount] = useState(0);
   const [aiSuggestion, setAiSuggestion] = useState('');
+  const [language, setLanguage] = useState<Language>('pt');
+  
+  const t = UI_TEXT[language];
   
   const suggestionTimeoutRef = useRef<number | null>(null);
   const debouncedGetAiSuggestionRef = useRef<(() => void) | undefined>();
@@ -278,7 +281,7 @@ function App() {
 
   const getAiSuggestion = useCallback(async () => {
     if (gameState !== GameState.PLAYER_TURN || playerHand.length < 2 || dealerHand.length < 1) return;
-    setAiSuggestion('Pensando...');
+    setAiSuggestion(t.thinking);
     try {
       const prompt = `You are a Blackjack strategy expert. Based on the Hi-Lo card counting system, give a concise suggestion in Portuguese (Bater, Ficar, Dobrar, ou Dividir). Do not explain your reasoning. Just provide the word. Player's hand: ${playerHand.map(c => c.rank).join(', ')} (Value: ${playerScore.value}). Dealer's up card: ${dealerHand[0].rank}. True Count: ${trueCount.toFixed(2)}. Suggestion:`;
       
@@ -286,13 +289,12 @@ function App() {
         model: 'gemini-2.5-flash',
         contents: prompt,
       });
-      // FIX: The text part of the response should be accessed as a function call in some versions of the SDK.
-      // The error "Expected 1 arguments, but got 0" can be misleading and often points to an incorrect API usage.
-      const suggestion = response.text().trim();
+      // FIX: The text part of the response should be accessed as a property, not a method.
+      const suggestion = response.text.trim();
       setAiSuggestion(suggestion);
     } catch (error) {
       console.error("Error fetching AI suggestion:", error);
-      setAiSuggestion('Erro na sugestão');
+      setAiSuggestion(t.suggestionError);
     }
   }, [gameState, playerHand, dealerHand, playerScore.value, trueCount]);
 
@@ -341,6 +343,29 @@ function App() {
 
   return (
     <div className="min-h-screen text-white flex flex-col items-center justify-center p-2 sm:p-4 selection:bg-yellow-500 selection:text-black">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4 flex gap-2 z-50">
+        <button
+          onClick={() => setLanguage('pt')}
+          className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${
+            language === 'pt'
+              ? 'bg-yellow-400 text-black shadow-lg'
+              : 'bg-black/30 text-white/70 hover:text-white border border-white/20'
+          }`}
+        >
+          PT
+        </button>
+        <button
+          onClick={() => setLanguage('en')}
+          className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${
+            language === 'en'
+              ? 'bg-yellow-400 text-black shadow-lg'
+              : 'bg-black/30 text-white/70 hover:text-white border border-white/20'
+          }`}
+        >
+          EN
+        </button>
+      </div>
       <div className="w-full flex flex-col xl:flex-row justify-center items-center xl:items-start gap-8">
         <div className="flex-grow flex flex-col items-center w-full max-w-7xl">
             {/* Game Table */}
@@ -366,7 +391,7 @@ function App() {
                     </div>
 
                     <div className="absolute top-4 right-12 text-center">
-                        <p className="font-bold text-white/80 text-lg filter drop-shadow-[0_2px_2px_#000]">Bid:</p>
+                        <p className="font-bold text-white/80 text-lg filter drop-shadow-[0_2px_2px_#000]">{t.bid}:</p>
                         <p className="text-4xl font-black text-yellow-400 [text-shadow:0_1px_2px_#000]">${currentBet.toLocaleString()}</p>
                     </div>
                 </div>
@@ -388,7 +413,7 @@ function App() {
                 {/* BOTTOM ROW: Player Hand & Balance */}
                 <div className="w-full relative flex justify-center items-end min-h-[220px] z-10">
                    <div className="absolute bottom-4 left-12 text-center">
-                        <p className="font-bold text-white/80 text-lg filter drop-shadow-[0_2px_2px_#000]">Balance:</p>
+                        <p className="font-bold text-white/80 text-lg filter drop-shadow-[0_2px_2px_#000]">{t.balance}:</p>
                         <p className="text-4xl font-black text-yellow-400 [text-shadow:0_1px_2px_#000]">${balance.toLocaleString()}</p>
                     </div>
                    <div className="flex flex-col items-center">
@@ -407,28 +432,28 @@ function App() {
             <div className="bg-black/30 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl p-4 w-full mt-4">
               {gameState === GameState.PRE_DEAL && (
                    <div className="flex flex-col items-center gap-4">
-                      <p className="text-xl font-bold text-white/80 drop-shadow-lg">Place your bet:</p>
+                      <p className="text-xl font-bold text-white/80 drop-shadow-lg">{t.placeBet}</p>
                       <CasinoChips balance={balance} onBet={placeBet} disabled={false} />
                       <div className="flex w-full gap-4 max-w-md mx-auto mt-2">
                           <button onClick={clearBet} disabled={currentBet === 0} className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-b from-red-500 to-red-800 hover:from-red-400 hover:to-red-700 text-white font-bold py-3 px-4 rounded-lg text-xl disabled:from-gray-700 disabled:to-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-red-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-red-900 active:border-b-0">
-                              <span>&#x2715;</span> Clear
+                              <span>&#x2715;</span> {t.clear}
                           </button>
                           <button onClick={dealHand} disabled={currentBet === 0} className="flex-[2] flex items-center justify-center gap-2 bg-gradient-to-b from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 text-white font-bold py-3 px-4 rounded-lg text-xl disabled:from-gray-700 disabled:to-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-green-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-green-800 active:border-b-0">
-                              <span>&#x1F0CF;</span> Deal
+                              <span>&#x1F0CF;</span> {t.deal}
                           </button>
                       </div>
                    </div>
               )}
               {handInProgress && (
                 <div className="flex justify-center space-x-4 max-w-md mx-auto">
-                    <button onClick={hit} disabled={playerScore.value >= 21} className="w-1/2 bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 font-bold py-3 px-6 rounded-lg text-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-blue-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-blue-800 active:border-b-0">Hit</button>
-                    <button onClick={stand} className="w-1/2 bg-gradient-to-b from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 font-bold py-3 px-6 rounded-lg text-xl transition-all duration-300 shadow-lg hover:shadow-red-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-red-900 active:border-b-0">Stand</button>
+                    <button onClick={hit} disabled={playerScore.value >= 21} className="w-1/2 bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 font-bold py-3 px-6 rounded-lg text-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-blue-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-blue-800 active:border-b-0">{t.hit}</button>
+                    <button onClick={stand} className="w-1/2 bg-gradient-to-b from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 font-bold py-3 px-6 rounded-lg text-xl transition-all duration-300 shadow-lg hover:shadow-red-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-red-900 active:border-b-0">{t.stand}</button>
                 </div>
               )}
               {gameState === GameState.HAND_OVER && (
                   <div className="max-w-md mx-auto">
                     <button onClick={resetHand} className="w-full bg-gradient-to-b from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500 text-black font-bold py-3 px-4 rounded-lg text-xl transition-all duration-300 shadow-lg hover:shadow-yellow-500/50 transform hover:scale-105 active:scale-95 border-b-4 border-yellow-700 active:border-b-0">
-                        New Hand
+                        {t.newHand}
                     </button>
                   </div>
               )}
@@ -442,6 +467,7 @@ function App() {
                 bustProbability={bustProbability}
                 deckComposition={deckComposition}
                 aiSuggestion={aiSuggestion}
+                language={language}
             />
         </div>
       </div>
