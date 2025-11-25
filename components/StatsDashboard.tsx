@@ -33,16 +33,6 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({
   return (
     <div className="bg-black/30 backdrop-blur-lg p-4 rounded-2xl shadow-2xl text-gray-100 w-full max-w-sm lg:max-w-xs xl:max-w-sm border border-white/10">
       <h2 className="text-2xl font-bold mb-4 text-center border-b border-white/20 pb-2 bg-clip-text text-transparent bg-gradient-to-r from-gray-100 to-gray-400">{t.statistics}</h2>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="text-center bg-black/20 p-2 rounded-lg border border-white/10">
-          <p className="text-sm text-gray-300">{t.runningCount}</p>
-          <p className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-cyan-400 to-blue-600">{runningCount}</p>
-        </div>
-        <div className="text-center bg-black/20 p-2 rounded-lg border border-white/10">
-          <p className="text-sm text-gray-300">{t.trueCount}</p>
-          <p className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-teal-300 to-cyan-500">{trueCount.toFixed(2)}</p>
-        </div>
-      </div>
       <div className="text-center mb-4 bg-black/20 p-2 rounded-lg border border-white/10">
         <p className="text-sm text-gray-300">{t.bustProbability}</p>
         <p className={`text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br ${getBustProbGradient(bustProbability)}`}>{bustProbability.toFixed(2)}%</p>
